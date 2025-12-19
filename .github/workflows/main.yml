@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Checkout repo
+    # 1. Checkout repository
     - name: Checkout Code
       uses: actions/checkout@v4
 
@@ -44,12 +44,23 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
+        port: 22
+        timeout: 30s
+        command_timeout: 10m
         script: |
+          echo "Pulling latest Docker image..."
           docker pull ${{ secrets.DOCKER_USERNAME }}/google_trends:latest
+
+          echo "Stopping old container if exists..."
           docker stop google_trends_app || true
           docker rm google_trends_app || true
+
+          echo "Running new container..."
           docker run -d \
             --name google_trends_app \
             -p 8080:8080 \
+            --restart unless-stopped \
             ${{ secrets.DOCKER_USERNAME }}/google_trends:latest
+
+          echo "Cleaning up old unused images..."
           docker image prune -f
